@@ -19,7 +19,6 @@ pingu() {
 }' >> ~/.zshrc && source ~/.zshrc
 
 . ~/.zshrc
-source ~/.bashrc
 sudo chmod +x /usr/local/sbin/pinguclean.sh
 ```
 
