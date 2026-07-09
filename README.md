@@ -1,32 +1,82 @@
-## Output de un Kali ya limpio:
+# pinguclean
 
-<img width="1084" height="758" alt="image" src="https://github.com/user-attachments/assets/134a3f9b-369c-4b0f-b32d-8e3b4aefa2c1" />
+Automated cleanup and maintenance script for Kali Linux. Removes caches, logs, temp files, Docker artifacts, old kernels, and pentesting tool residuals — safely and idempotently.
 
-### Cómo añadir al path del sistema este script de limpieza:
-
-#### 1) Mueve el script a una ruta del sistema y dale permisos de root:
+## Quick path
 
 ```bash
-sudo install -o root -g root -m 750 /home/kali/Desktop/pinguclean.sh /usr/local/sbin/pinguclean.sh
+# Install
+sudo install -o root -g root -m 750 pinguclean.sh /usr/local/sbin/pinguclean.sh
+
+# Add alias to .zshrc
+echo 'pingu() { sudo /usr/local/sbin/pinguclean.sh "$@"; }' >> ~/.zshrc && source ~/.zshrc
+
+# Run
+sudo pingu              # light mode (daily)
+sudo pingu --deep       # deep mode (weekly)
+sudo pingu --aggressive # aggressive mode (monthly)
+sudo pingu --dry-run    # preview without changes
 ```
 
-#### 2) Añade la función al `.zshrc` (y al `.bashrc` si usas bash):
+## What it cleans
+
+| Category | Light | Deep | Aggressive |
+|----------|-------|------|------------|
+| APT cache & orphan packages | ✓ | ✓ | ✓ |
+| System logs & journald | ✓ | ✓ | ✓ |
+| Temp files (`/tmp`, `/var/tmp`) | ✓ | ✓ | ✓ |
+| User caches (browser, IDE, thumbnails) | ✓ | ✓ | ✓ |
+| Package managers (pip, npm, cargo, gem, yarn, composer, go) | ✓ | ✓ | ✓ |
+| Docker prune | — | ✓ | ✓ |
+| Old kernels & headers | — | ✓ | ✓ |
+| Snap/Flatpak cleanup | — | ✓ | ✓ |
+| TRIM (SSD optimization) | — | ✓ | ✓ |
+| RAM cache release | ✓ | ✓ | ✓ |
+| Aggressive log truncation | — | — | ✓ |
+| Timeshift snapshot removal | — | — | ✓ |
+
+## Safety contract
+
+- **NO** package removal (except orphan autoremove)
+- **NO** user file modification outside known caches
+- **NO** system configuration changes
+- **NO** `.bashrc` or shell config touching
+- Idempotent — safe to run multiple times
+- Lock file prevents concurrent execution
+
+## Architecture
+
+```
+pinguclean.sh
+├── Configuration (mode detection, variable overrides)
+├── Helpers (logging, runq, root check, user detection)
+├── Modules
+│   ├── cleanup_apt()              # APT packages & caches
+│   ├── cleanup_logs()             # System logs & journald
+│   ├── cleanup_tmp()              # Temp files (X11-safe)
+│   ├── cleanup_user_caches()      # Per-user caches
+│   ├── cleanup_package_managers() # pip, npm, cargo, etc.
+│   ├── cleanup_docker()           # Docker, kernels, snap, flatpak
+│   ├── cleanup_aggressive_extras()# Aggressive-only cleanups
+│   ├── cleanup_ram()              # RAM cache release
+│   └── cleanup_optimizations()    # updatedb, DNS, dpkg
+└── main()                         # Orchestration & summary
+```
+
+## Testing
 
 ```bash
-echo '
-pingu() {
-    sudo /usr/local/sbin/pinguclean.sh "$@"
-}' >> ~/.zshrc && source ~/.zshrc
+# Run the test suite (requires root)
+sudo bash tests/test_pinguclean.sh
 
-. ~/.zshrc
-sudo chmod +x /usr/local/sbin/pinguclean.sh
+# Static analysis
+shellcheck -x pinguclean.sh
 ```
 
-#### 3) Ejecución:
+## Logs
 
-```bash
-sudo bash pinguclean.sh
-```
+All operations are logged to `/var/log/kali-cleanup/cleanup-YYYYMMDD_HHMMSS.log`. Logs older than 14 days are auto-rotated.
 
-<img width="929" height="486" alt="image" src="https://github.com/user-attachments/assets/0eb34e7f-a089-496f-8ff7-22a0cc9f0b04" />
+## License
 
+MIT
